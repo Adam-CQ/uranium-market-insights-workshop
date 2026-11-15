@@ -168,3 +168,108 @@ The chart is a simple SVG placeholder with a fixed 0–100 scale appropriate to
 this fixture. ECharts integration and real source values come later. Automated
 DOM tests do not verify browser layout; responsive visual review is manual.
 Pause for the milestone review before proceeding to API contracts.
+
+## Milestone 3: typed mock API contracts
+
+Two read endpoints are available, backed by deterministic synthetic values:
+
+- `GET /api/v1/prices/uranium?from=2025-04&to=2025-06`
+- `GET /api/v1/market/summary`
+
+The frontend still uses its local mock fixture; API integration comes later.
+The API fixture matches that preview but is not an ingested dataset. Neither
+endpoint claims a Cameco or EIA source. Publication/retrieval dates and source
+URLs are null; provenance explicitly says `data_status: "mock"`.
+
+### Code map
+
+- `backend/app/schemas.py`: Pydantic models for prices, provenance, summary,
+  and contracting. These define the public JSON shape and OpenAPI schemas.
+- `backend/app/market_fixture.py`: synthetic values and honest source metadata;
+  each call creates independent models so filtering cannot mutate later requests.
+- `backend/app/api/market.py`: route handlers, calendar-month validation,
+  inclusive filtering, and summary assembly.
+- `backend/app/main.py`: registers the router and preserves `/health`.
+- `backend/tests/test_market.py`: deterministic range, metadata, summary, and
+  generated-documentation checks with no external source requests.
+
+### Worked request and response
+
+Start the backend from the repository root:
+
+```bash
+uv run --directory backend uvicorn app.main:app --reload --port 8000
+```
+
+In another terminal:
+
+```bash
+curl --fail 'http://localhost:8000/api/v1/prices/uranium?from=2025-04&to=2025-06'
+curl --fail http://localhost:8000/api/v1/market/summary
+uv run --directory backend pytest
+```
+
+Quotes keep Bash from interpreting `&` as a background command. `--fail` makes
+curl report unsuccessful HTTP responses. No dependency installation is needed
+beyond Milestone 1. If running containers, rebuild the API after these changes.
+
+Open http://localhost:8000/docs and expand the price route. Use **Try it out**
+with `from=2025-04` and `to=2025-06`. Expect HTTP 200 and three points in each
+of two series. An abbreviated response (metadata is shortened here) is:
+
+```json
+{
+  "from_month": "2025-04",
+  "to_month": "2025-06",
+  "series": [
+    {
+      "series_id": "uranium_spot",
+      "unit": "USD/lb U3O8",
+      "currency": "USD",
+      "points": [
+        {"observation_month": "2025-04", "value": 74.0},
+        {"observation_month": "2025-05", "value": 71.0},
+        {"observation_month": "2025-06", "value": 76.0}
+      ]
+    }
+  ]
+}
+```
+
+The complete response also contains the long-term series, per-series provenance,
+labels, measure types, and a synthetic-data disclaimer. React can later consume
+this JSON with `fetch`, check `response.ok`, and pass `series[].points` into chart
+components. Network JSON will require runtime checking or a generated client;
+TypeScript interfaces alone do not validate a server response.
+
+For example, the route declares:
+
+```python
+@router.get("/prices/uranium", response_model=PriceHistory)
+```
+
+FastAPI binds query strings to handler arguments (the external name `from`
+maps to Python's `from_month`, since `from` is a Python keyword). The handler
+filters fixture points and returns a `PriceHistory`. Pydantic validates fields;
+FastAPI serializes the model as JSON and documents it in OpenAPI. Response-model
+validation catches server mistakes; invalid client queries receive HTTP 422.
+
+### Range behavior and verification
+
+- Bounds are optional and inclusive; absent bounds mean the available history.
+- `from=2025-03&to=2025-03` returns March only.
+- `from=2030-01` returns HTTP 200 with two empty point arrays and intact metadata.
+- Malformed months, year zero, and reversed ranges return HTTP 422 with `detail`.
+- Summary dates reflect the latest fixture observation per metric: June 2025
+  prices and reporting year 2024 U.S. signed-contract count. It does not invent
+  delivery dates, source retrieval times, or a shared publication date.
+
+Verification: all 16 backend tests pass (including the original health test).
+Live local HTTP checks pass for health, Swagger UI, OpenAPI, summary, valid and
+empty price ranges, and a reversed-range 422 response. The existing Starlette
+HTTPX deprecation warning remains; no additional dependency was introduced.
+Swagger UI's interactive browser controls still require manual review.
+
+Review checkpoint: trace query → validation → fixture filter → Pydantic model →
+JSON, then inspect the provenance and separate reporting periods in `/docs`.
+Pause here before adding PostgreSQL schema and migrations in Milestone 4.
