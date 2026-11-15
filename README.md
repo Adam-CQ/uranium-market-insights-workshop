@@ -8,7 +8,7 @@ Educational market information, not investment advice. This workshop follows
 FastAPI serves HTTP requests, React renders the browser interface, and Vite
 serves and builds the frontend. PostgreSQL has a persistent Compose volume;
 the API does not query it until the persistence milestone. `/health` reports
-API liveness only. No market data is included yet.
+API liveness only. No real market data is included yet; Milestone 2 uses synthetic fixtures.
 
 Python dependencies live in `backend/pyproject.toml` and `backend/uv.lock`.
 `uv` manages `backend/.venv`. JavaScript dependencies live in
@@ -106,3 +106,65 @@ with provenance, source dates, units, freshness, and source-specific parser test
 There are no download/refresh commands yet. Forecasts, global contracting, and
 live feeds are not part of this scaffold. See the specification for source-use
 requirements and the milestone sequence.
+
+## Milestone 2: mock React dashboard
+
+All values are invented teaching examples, not Cameco/EIA data. The snapshot
+shows spot and long-term indicators, a U.S. signing count, and explicitly
+unavailable source freshness. A shared range selector updates both the chart
+and accessible table and recalculates price changes from the first selected
+month to the latest month. Signing counts retain their separate annual period.
+
+### Code map and worked example
+
+- `frontend/src/mockMarket.ts`: the `UraniumPricePoint` interface, synthetic
+  records, and range selection. TypeScript checks each record at build time.
+- `frontend/src/Dashboard.tsx`: `Dashboard` owns range state, passes selected
+  points to `PriceChart`, and supplies text props to reusable `SnapshotCard`s.
+- `frontend/src/main.tsx`: mounts React and retains the API connection check.
+- `frontend/src/style.css`: four/two/one-column cards at desktop/tablet/mobile
+  widths, a scalable SVG, and a horizontally scrollable data table.
+- `frontend/src/Dashboard.test.tsx`: Vitest/React Testing Library checks for
+  mock labels, units, U.S. scope, freshness, and changing/restoring the range.
+
+For example, the page's data flow is:
+
+```tsx
+const [range, setRange] = useState<PriceRange>("all");
+const points = selectPrices(mockPrices, range);
+// The select calls setRange; React renders again with the new points.
+<PriceChart points={points} />
+```
+
+`points` is a prop: input passed from parent to child. `range` is state:
+React remembers it and rerenders when it changes. In `mockMarket.ts`, each
+record must contain `month`, `spot`, and `longTerm`; renaming `longTerm` to
+`longterm` produces a TypeScript build error. Mock data lets us verify this
+component flow before introducing HTTP market endpoints and ingestion.
+
+### Run and verify
+
+From the repository root:
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend test
+npm --prefix frontend run build
+npm --prefix frontend run dev -- --port 5173 --strictPort
+```
+
+`ci` installs locked dependencies; `test` runs Vitest once using jsdom (a DOM
+simulation); `build` checks types and bundles the app. The dashboard renders
+without the API, though the connection-check button still requires it.
+If using Compose, rebuild the frontend with `docker compose up --build -d`.
+
+Open http://localhost:5173. Review at desktop and 375px mobile widths. Confirm:
+all values are labelled mock; no source retrieval is claimed; switching from
+all six months to the last three leaves April–June in both chart and table;
+spot change becomes +2.00 USD/lb U3O8; restoring the range restores six rows.
+Check that the API connection button still works when the API is running.
+
+The chart is a simple SVG placeholder with a fixed 0–100 scale appropriate to
+this fixture. ECharts integration and real source values come later. Automated
+DOM tests do not verify browser layout; responsive visual review is manual.
+Pause for the milestone review before proceeding to API contracts.
