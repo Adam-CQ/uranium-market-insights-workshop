@@ -1,0 +1,51 @@
+{
+  "attribution": "Source: U.S. Energy Information Administration, Uranium Marketing Annual Report, 2025 data, re-released August 13, 2026.",
+  "reuse_policy": "https://www.eia.gov/about/copyrights_reuse.php",
+  "fixture_method": "Cell values copied into compact workbooks; original formatting, charts, workbook metadata and internal paths removed. Original workbooks retained locally, not committed.",
+  "files": [
+    {
+      "table": 7,
+      "url": "https://www.eia.gov/uranium/marketing/xls/umartable7.xlsx",
+      "retrieved_at": "2026-11-15T22:46:16.759069+00:00",
+      "sha256": "068e585fb129c035f5d6e5fe5a365fb2df23bea70610284155acab0b454d5b8d",
+      "artifact": "data/raw/eia/068e585fb129c035f5d6e5fe5a365fb2df23bea70610284155acab0b454d5b8d.xlsx",
+      "fixture": "table7_2025.xlsx",
+      "fixture_sha256": "8c1a1ac484ebf40c929dcfe2c180a9dcbb83da7dc5d73b8da1965a868450b27f",
+      "report_year": 2025,
+      "report_publication_date": "2026-08-13"
+    },
+    {
+      "table": 8,
+      "url": "https://www.eia.gov/uranium/marketing/xls/umartable8.xlsx",
+      "retrieved_at": "2026-11-15T22:46:16.987513+00:00",
+      "sha256": "e3709749cf6f4d4417917d9608f20dcc5a90075b4781b37c89861bf6624a872b",
+      "artifact": "data/raw/eia/e3709749cf6f4d4417917d9608f20dcc5a90075b4781b37c89861bf6624a872b.xlsx",
+      "fixture": "table8_2025.xlsx",
+      "fixture_sha256": "257b96f0fb6e2926aa81bae1aad23fb460e7026be8b39056b787b56300c4c30d",
+      "report_year": 2025,
+      "report_publication_date": "2026-08-13"
+    },
+    {
+      "table": 9,
+      "url": "https://www.eia.gov/uranium/marketing/xls/umartable9figure8.xlsx",
+      "retrieved_at": "2026-11-15T22:46:17.193480+00:00",
+      "sha256": "576ecccd732144c3e5333eae7164fe6f32cafa664d7e63c04a0f61ea16ed5335",
+      "artifact": "data/raw/eia/576ecccd732144c3e5333eae7164fe6f32cafa664d7e63c04a0f61ea16ed5335.xlsx",
+      "fixture": "table9_2025.xlsx",
+      "fixture_sha256": "254c3bae36580e4c178e55cb1a75e65f07fb0a62e20f5f1241cdd5895aefa220",
+      "report_year": 2025,
+      "report_publication_date": "2026-08-13"
+    },
+    {
+      "table": 10,
+      "url": "https://www.eia.gov/uranium/marketing/xls/umartable10figure9.xlsx",
+      "retrieved_at": "2026-11-15T22:46:17.422849+00:00",
+      "sha256": "37514787042c847ce0a4b4d4d95cb53fd574f3ef9a2c53b9167d8c424e6c2662",
+      "artifact": "data/raw/eia/37514787042c847ce0a4b4d4d95cb53fd574f3ef9a2c53b9167d8c424e6c2662.xlsx",
+      "fixture": "table10_2025.xlsx",
+      "fixture_sha256": "2c70f31fd115d0b57e9b7b0c275f461992464e0110f136c3837a2ed12c31b69e",
+      "report_year": 2025,
+      "report_publication_date": "2026-08-13"
+    }
+  ]
+}

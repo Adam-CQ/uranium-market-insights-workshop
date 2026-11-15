@@ -2,7 +2,7 @@
 name = "uranium-market-api"
 version = "0.1.0"
 requires-python = ">=3.13,<3.14"
-dependencies = ["fastapi==0.162.7", "uvicorn==0.54.0", "sqlalchemy==2.1.8", "alembic==1.20.1", "psycopg[binary]==3.3.9"]
+dependencies = ["fastapi==0.162.7", "uvicorn==0.54.0", "sqlalchemy==2.1.8", "alembic==1.20.1", "psycopg[binary]==3.3.9", "openpyxl==3.1.5"]
 
 [dependency-groups]
 dev = ["pytest==9.2.0", "httpx==0.28.1"]

@@ -1,5 +1,9 @@
 # Source artifacts, provenance, and refresh
 
+For EIA Tables 7–10, see [the EIA workbook guide](eia.md): permitted public-data
+downloads, imports, definitions, and contracting endpoints. Cameco remains
+synthetic pending permission; the sections below describe that separate source.
+
 ## Cameco source review — 2026-11-15
 
 - Public historical table: https://www.cameco.com/invest/markets/uranium-price

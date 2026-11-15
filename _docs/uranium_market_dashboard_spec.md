@@ -101,6 +101,7 @@ Include a “How to read this dashboard” section and a glossary. At minimum ex
 - Table 7, delivered uranium by contract type and delivery year: access via the report landing page; select the table labelled “by contract type and delivery year”.
 - EIA publishes XLS and PDF formats. Prefer the official XLS tables for ingestion; retain the original workbook and report vintage in the raw-data area.
 - Scope: owners/operators of U.S. civilian nuclear power reactors (COOs), not global utility contracting.
+- Confirmed Table 8 qualification: its contract count covers contracts signed in the reporting year with deliveries received that year, not every new contract regardless of first delivery. Keep its delivered quantity, weighted-average price, and contract count as separate measures. Table 7 quantities are labelled “with reported price”; retain that qualification and the material-type breakdown.
 - EIA distinguishes spot contracts (typically one-time delivery, usually within a year of execution) from long-term contracts (one or more deliveries at least a year after execution). Preserve EIA's definitions and do not substitute our own silently.
 - Cadence: annual. The latest report may be revised; retain the report year, publication/revision date, retrieval timestamp, source table, and source file checksum.
 
@@ -304,7 +305,7 @@ Avoid unexplained code dumps. Introduce one new concept at a time, preserve earl
 
 - Implement download instructions and import for official EIA XLS tables, initially Table 8 (signed contracts), Table 9 (future delivery years for contracts signed in the report year), Table 10 (existing contracted purchases by future delivery year), and Table 7 (actual delivered uranium by contract type/material type).
 - Teach: workbook/sheet parsing, `pandas` or `openpyxl` use where appropriate, reporting year versus delivery year, suppression markers such as `W`, units, rounding, and U.S.-only scope.
-- Worked example: map one Table 9 row to a fact record with both `report_year` and `delivery_year`; show why using a single generic `year` column would be ambiguous. Explain why suppressed values must not be coerced to zero.
+- Worked example: map one Table 9 row to a fact record with both `report_year` and `delivery_year`; show why using a single generic `year` column would be ambiguous. Explain why suppressed values must not be coerced to zero. Clarify that Table 8 counts signed contracts with same-year deliveries, while Table 7 covers actual delivered quantities with reported price.
 - Verify: fixture-based parser tests for normal, withheld, and missing values; confirm totals and units against the official table; ensure U.S.-only label is returned by the API.
 
 #### Milestone 7 — Interactive visualizations and educational explanations

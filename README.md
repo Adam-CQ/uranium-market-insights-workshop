@@ -5,8 +5,9 @@ Educational market information, not investment advice. This workshop follows
 
 ## Current data status
 
-The dashboard and API currently display **invented mock data**, not Cameco or
-EIA observations. We will continue using synthetic prices while permission for
+The dashboard, price endpoints, and market-summary preview currently display
+**invented mock data**. Dedicated EIA contracting endpoints now serve imported
+2025 U.S. observations; the dashboard will connect to them in Milestone 7. We will continue using synthetic prices while permission for
 Cameco import and display remains unresolved. Mock values are not expected to
 match Cameco's published prices and must not be used to check actual market levels.
 
@@ -121,8 +122,9 @@ client integration; the test remains functional with the approved HTTPX dependen
 Later milestones add [Cameco prices](https://www.cameco.com/invest/markets/uranium-price)
 and [EIA U.S. utility contracting](https://www.eia.gov/uranium/marketing/index.php),
 with provenance, source dates, units, freshness, and source-specific parser tests.
-There are no download/refresh commands yet. Forecasts, global contracting, and
-live feeds are not part of this scaffold. See the specification for source-use
+The [EIA workflow](data/eia.md) documents download and refresh commands. Cameco
+reuse remains pending permission. Forecasts, global contracting, and live feeds
+are not part of this scaffold. See the specification for source-use
 requirements and the milestone sequence.
 
 ## Milestone 2: mock React dashboard
@@ -488,3 +490,72 @@ The source-page review confirmed the HTML column structure, mixed date labels,
 and identical duplicate-month case. Actual price data was not imported or
 included in fixtures. Live source-value validation remains pending permission.
 Pause for review before EIA ingestion; source licensing remains an open MVP item.
+
+
+## Milestone 6: EIA workbook ingestion and contracting API
+
+The importer reads official EIA `.xlsx` Tables 7, 8, 9, and 10. `openpyxl` is pinned
+in the uv-managed backend. The report-year/delivery-year distinction, material,
+contract type, supplier scope, minimum/maximum bounds, units, and withheld/missing
+values remain explicit. No database migration was needed: each material/supplier/
+bound combination has a distinct metric definition in the existing schema.
+
+**Table 8 qualification:** its signing count covers contracts signed in the
+reporting year with deliveries received that year. It is not every contract
+signed regardless of first delivery. Table 7 quantities are deliveries with
+reported price. See [data/eia.md](data/eia.md) for definitions and attribution.
+
+### Code map and concept lesson
+
+- `backend/app/ingestion/eia_contracting.py`: workbook adapter, numeric/marker
+  normalization, definition and totals checks, preview/import CLI.
+- `backend/app/ingestion/eia_repository.py`: checksum-named raw retention,
+  provenance, idempotent atomic imports, revisions, and failure-run logging.
+- `backend/app/api/contracts.py`: typed PostgreSQL read endpoints with U.S.-only
+  scope, period/dimension labels, units, source metadata, and availability status.
+- `backend/tests/fixtures/eia/`: compact permitted EIA source-value workbooks and
+  attribution/checksum manifest; no live network dependencies in tests.
+- `backend/tests/test_eia_contracting.py`, `test_eia_database.py`: parser and
+  database/API behavior, including withheld/missing values and repeat imports.
+
+A workbook is a set of sheets and cells, with headers, footnotes, merged cells,
+and sometimes formulas or charts. The adapter validates the reviewed sheet and
+headers before interpreting cells; it does not treat the whole workbook as one
+flat CSV. `W` means withheld, not a numeric zero. Quantities and weighted-average
+prices are separate metrics, so a price column cannot become a contracting bar.
+
+Worked example: a Table 9 row for delivery year 2026 has `report_year=2025` and
+`delivery_year=2026`; minimum and maximum become separate quantity metrics in
+thousand pounds U3O8 equivalent. Both periods survive through the database and
+JSON response. A Table 7 delivery in 2025 instead has delivery/report year 2025;
+it must not be combined with that forward contracted quantity as one series.
+
+### Commands and review checkpoint
+
+Follow [the EIA download/import guide](data/eia.md) for exact commands, metadata,
+expected results, source comparisons, and how to inspect `/docs`. To run tests:
+
+```bash
+uv sync --directory backend --locked
+uv run --directory backend pytest tests/test_eia_contracting.py
+
+docker compose up --build -d db api
+docker compose run --rm --no-deps -T -e RUN_POSTGRES_TESTS=1 \
+  -v "$PWD/backend/tests:/app/tests:ro" \
+  api uv run --locked pytest tests
+```
+
+Read endpoints are `/api/v1/contracts/signings`, `/future-deliveries` (choose
+`table=9` or `table=10`), and `/deliveries`, all under `/api/v1/contracts` with
+`scope=us` and optional `report_year=2025`. They return available EIA imports;
+they do not silently substitute mock data when a source is unavailable.
+
+Verification: **84 backend tests passed against PostgreSQL**. The four official
+2025 workbooks imported 121 facts; repeating the import added no duplicates.
+Live HTTP checks passed for all four EIA table views, and the market summary
+retained its mock status. The known Starlette/HTTPX warning remains.
+
+The dashboard and existing price/market-summary endpoints remain mocked, as
+agreed. Cameco permission is still unresolved; EIA's public reuse policy permits
+these survey-data imports with attribution. Stop at this review checkpoint
+before chart integration and manual source-check guidance in Milestone 7.
