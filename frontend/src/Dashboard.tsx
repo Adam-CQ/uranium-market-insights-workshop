@@ -66,6 +66,7 @@ export function Dashboard() {
       </header>
       <aside className="notice" aria-label="Mock data notice">
         <strong>Mock data — all market values are invented.</strong> This preview contains no Cameco or EIA observations. Dates and units demonstrate the future interface.
+        <p>Cameco price import and display are pending reuse permission. We will continue showing synthetic prices; these values are not expected to match Cameco’s published prices.</p>
       </aside>
       <section aria-labelledby="snapshot-title">
         <h2 id="snapshot-title">Market snapshot</h2>

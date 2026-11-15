@@ -3,6 +3,24 @@
 Educational market information, not investment advice. This workshop follows
 [_docs/uranium_market_dashboard_spec.md](_docs/uranium_market_dashboard_spec.md).
 
+## Current data status
+
+The dashboard and API currently display **invented mock data**, not Cameco or
+EIA observations. We will continue using synthetic prices while permission for
+Cameco import and display remains unresolved. Mock values are not expected to
+match Cameco's published prices and must not be used to check actual market levels.
+
+Milestone 5's parser and database adapter are implemented and tested with synthetic
+fixtures; real-data import and source-value validation remain pending. See the
+[source review](data/README.md) and [Cameco terms](https://www.cameco.com/terms-of-use).
+
+Milestone 7 will add detailed manual-check instructions beside the price chart
+and in this README, with links to [Cameco's uranium price page](https://www.cameco.com/invest/markets/uranium-price),
+its methodology, and reuse terms. The guide will explain how to inspect the
+published series, observation month, units, missing values, and methodology
+changes. It will distinguish reviewing the source from validating our mock
+prices; comparing imported values is conditional on permitted real-data use.
+
 ## Milestone 1: local scaffold
 
 FastAPI serves HTTP requests, React renders the browser interface, and Vite
@@ -408,3 +426,65 @@ Docker/WSL integration was unavailable. The offline migration compiles to
 PostgreSQL SQL; actual clean-database application and constraints remain pending
 until the integration command above runs. The known HTTPX warning remains.
 Review these results before proceeding to source ingestion in Milestone 5.
+
+## Milestone 5: Cameco-shaped HTML adapter
+
+See [data/README.md](data/README.md) for the source review, permission finding,
+worked normalization example, synthetic import commands, and refresh procedure.
+Cameco's stated terms do not establish permission for this application's data
+reuse; real ingestion and redistribution remain pending written permission.
+The adapter therefore makes no network requests and ships only invented data.
+No new dependencies were added, and the API/frontend keep their mock fixtures.
+
+### Code map and lesson
+
+- `backend/app/ingestion/cameco_prices.py`: strict standard-library HTML parser,
+  typed normalized observations, and an explicit file-based CLI.
+- `backend/app/ingestion/price_repository.py`: raw artifact retention, source and
+  metric definitions, ingestion runs, atomic writes, and revision handling.
+- `backend/tests/fixtures/cameco_prices_synthetic.html`: invented dates/values and
+  minimal table markup, exercising missing history, method boundaries, duplicates.
+- `backend/tests/test_cameco_prices.py`, `test_cameco_database.py`: offline parsing
+  and real PostgreSQL idempotence/revision/failure checks.
+- `backend/tests/conftest.py`: the existing isolated-schema fixture, now shared
+  between schema and ingestion tests; all integration writes roll back.
+
+An adapter is the boundary between a provider-specific layout and our model.
+`parse_prices(html)` has no network or database side effects. It returns typed
+records using `Decimal` rather than binary floating-point values. The repository
+then attaches source metadata and persists them. This separation lets tests
+check a known fixture without relying on a changing external website.
+
+For example, the core conversion in the parser is:
+
+```python
+month = source_date.replace(day=1)
+value = Decimal(raw_value)
+```
+
+The first line identifies a month, not an actual sale date. The original source
+date survives in notes and raw HTML. Blank historical long-term cells become
+`None`, not `Decimal('0')`. The importer compares normalized values, skips
+unchanged facts, and inserts revised values with `supersedes_observation_id`.
+Raw HTML SHA-256 identifies a source artifact; it does not prove a publisher's
+publication date or that reuse is licensed.
+
+### Commands and review checkpoint
+
+```bash
+uv run --directory backend python -m app.ingestion.cameco_prices \
+  tests/fixtures/cameco_prices_synthetic.html --synthetic
+uv run --directory backend pytest
+```
+
+The first command previews 8 mock observations and a duplicate warning without
+writing files or connecting to PostgreSQL. The local suite skips integration
+checks unless a database is configured. The full Compose test command is in
+`data/README.md`; it includes parser and database checks, not live network calls.
+
+Verification on 2026-11-15: 56 tests passed with real PostgreSQL, including the
+Milestone 4 migration/constraint checks previously pending WSL integration.
+The source-page review confirmed the HTML column structure, mixed date labels,
+and identical duplicate-month case. Actual price data was not imported or
+included in fixtures. Live source-value validation remains pending permission.
+Pause for review before EIA ingestion; source licensing remains an open MVP item.

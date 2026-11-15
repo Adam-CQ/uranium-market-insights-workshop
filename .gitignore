@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 node_modules/
 dist/
+
+# Local source artifacts and normalized extracts are never committed.
+data/raw/
+data/processed/
