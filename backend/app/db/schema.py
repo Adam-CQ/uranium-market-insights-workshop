@@ -1,0 +1,80 @@
+"""Normalized operational schema. Schema changes require a new Alembic revision."""
+import sqlalchemy as sa
+
+metadata = sa.MetaData()
+
+sources = sa.Table(
+    "data_source", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("name", sa.Text, nullable=False, unique=True),
+    sa.Column("url", sa.Text, nullable=False),
+    sa.Column("cadence", sa.Text, nullable=False),
+    sa.Column("notes", sa.Text, nullable=False),
+)
+metrics = sa.Table(
+    "metric_definition", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("source_id", sa.Integer, sa.ForeignKey("data_source.id"), nullable=False),
+    sa.Column("series_id", sa.Text, nullable=False, unique=True),
+    sa.Column("label", sa.Text, nullable=False),
+    sa.Column("unit", sa.Text, nullable=False),
+    sa.Column("currency", sa.String(3)),
+    sa.Column("geography", sa.Text, nullable=False),
+    sa.Column("covered_population", sa.Text, nullable=False),
+    sa.Column("measure_type", sa.Text, nullable=False),
+    sa.Column("methodology_notes", sa.Text, nullable=False),
+    sa.UniqueConstraint("id", "source_id", name="uq_metric_source"),
+)
+runs = sa.Table(
+    "ingestion_run", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("source_id", sa.Integer, sa.ForeignKey("data_source.id"), nullable=False),
+    sa.Column("source_url", sa.Text, nullable=False),
+    sa.Column("source_table", sa.Text, nullable=False),
+    sa.Column("source_vintage", sa.Text, nullable=False),
+    sa.Column("source_publication_date", sa.Date),
+    sa.Column("retrieved_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("artifact_sha256", sa.String(64), nullable=False),
+    sa.Column("artifact_path", sa.Text, nullable=False),
+    sa.Column("method_version", sa.Text, nullable=False),
+    sa.Column("status", sa.Text, nullable=False),
+    sa.Column("notes", sa.Text, nullable=False),
+    sa.CheckConstraint("status IN ('running', 'succeeded', 'failed')", name="ck_run_status"),
+    sa.CheckConstraint("artifact_sha256 ~ '^[0-9a-f]{64}$'", name="ck_artifact_sha256"),
+    sa.UniqueConstraint("id", "source_id", name="uq_run_source"),
+)
+observations = sa.Table(
+    "market_observation", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("metric_id", sa.Integer, nullable=False),
+    sa.Column("source_id", sa.Integer, nullable=False),
+    sa.Column("ingestion_run_id", sa.Integer, nullable=False),
+    sa.Column("artifact_sha256", sa.String(64), nullable=False),
+    sa.Column("observation_date", sa.Date),
+    sa.Column("report_year", sa.Integer),
+    sa.Column("delivery_year", sa.Integer),
+    sa.Column("contract_type", sa.Text),
+    sa.Column("scenario", sa.Text),
+    sa.Column("raw_value", sa.Text, nullable=False),
+    sa.Column("normalized_value", sa.Numeric(24, 8)),
+    sa.Column("value_status", sa.Text, nullable=False),
+    sa.Column("data_status", sa.Text, nullable=False),
+    sa.Column("quality_notes", sa.Text, nullable=False),
+    sa.UniqueConstraint("id", "metric_id", name="uq_observation_metric"),
+    sa.Column("supersedes_observation_id", sa.Integer),
+    sa.ForeignKeyConstraint(["supersedes_observation_id", "metric_id"], ["market_observation.id", "market_observation.metric_id"], name="fk_revision_metric"),
+    sa.ForeignKeyConstraint(["metric_id", "source_id"], ["metric_definition.id", "metric_definition.source_id"], name="fk_observation_metric_source"),
+    sa.ForeignKeyConstraint(["ingestion_run_id", "source_id", "artifact_sha256"], ["ingestion_run.id", "ingestion_run.source_id", "ingestion_run.artifact_sha256"], name="fk_observation_artifact"),
+    sa.CheckConstraint("observation_date IS NOT NULL OR report_year IS NOT NULL", name="ck_observation_period"),
+    sa.CheckConstraint("report_year IS NULL OR report_year BETWEEN 1 AND 9999", name="ck_report_year"),
+    sa.CheckConstraint("delivery_year IS NULL OR delivery_year BETWEEN 1 AND 9999", name="ck_delivery_year"),
+    sa.CheckConstraint("delivery_year IS NULL OR report_year IS NOT NULL", name="ck_delivery_reporting_period"),
+    sa.CheckConstraint("value_status IN ('available', 'withheld', 'missing')", name="ck_value_status"),
+    sa.CheckConstraint("(value_status = 'available' AND normalized_value IS NOT NULL) OR (value_status IN ('withheld', 'missing') AND normalized_value IS NULL)", name="ck_value_presence"),
+    sa.CheckConstraint("normalized_value IS NULL OR (normalized_value >= 0 AND normalized_value != 'NaN'::numeric)", name="ck_nonnegative_value"),
+    sa.CheckConstraint("data_status IN ('observed', 'estimate', 'forecast', 'digitized_estimate', 'revised', 'mock')", name="ck_data_status"),
+    sa.CheckConstraint("supersedes_observation_id IS NULL OR supersedes_observation_id != id", name="ck_no_self_revision"),
+    sa.UniqueConstraint("metric_id", "artifact_sha256", "observation_date", "report_year", "delivery_year", "contract_type", "scenario", name="uq_observation_artifact_period", postgresql_nulls_not_distinct=True),
+)
+# Composite key ensures an observation's checksum matches its ingestion artifact.
+sa.UniqueConstraint(runs.c.id, runs.c.source_id, runs.c.artifact_sha256, name="uq_run_artifact")

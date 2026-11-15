@@ -273,3 +273,138 @@ Swagger UI's interactive browser controls still require manual review.
 Review checkpoint: trace query → validation → fixture filter → Pydantic model →
 JSON, then inspect the provenance and separate reporting periods in `/docs`.
 Pause here before adding PostgreSQL schema and migrations in Milestone 4.
+
+## Milestone 4: PostgreSQL schema and provenance
+
+SQLAlchemy describes tables and queries in Python; psycopg transports SQL to
+PostgreSQL; Alembic applies numbered schema migrations. All three are pinned in
+the uv manifest/lockfile. No `.env` changes are required. The API still serves
+the Milestone 3 synthetic responses; persistence is a foundation for ingestion.
+
+### Code map and relationships
+
+- `backend/app/db/schema.py`: four SQLAlchemy table definitions and constraints.
+- `backend/app/db/connection.py`: explicit database-command configuration; importing
+  the API does not connect to a database or require a password.
+- `backend/migrations/versions/0001_provenance.py`: frozen initial schema migration.
+- `backend/migrations/env.py`, `backend/alembic.ini`: Alembic execution configuration.
+- `backend/app/db/demo.py`: synthetic insert/query/duplicate demonstration.
+- `backend/tests/test_database.py`: opt-in real PostgreSQL migration and constraint tests.
+- `backend/tests/test_migration_sql.py`: offline PostgreSQL SQL compilation test.
+- `backend/Dockerfile`, `compose.yaml`: include migration files and pass internal
+  database connection settings to the API container.
+
+`data_source` has many `metric_definition` and `ingestion_run` rows. Each
+`market_observation` refers to a metric and ingestion artifact. Primary keys
+identify rows; foreign keys enforce relationships. Composite foreign keys stop
+an observation from pairing one publisher's metric with another's source file.
+
+Metric definitions carry unit, currency, geography, population, measure type,
+and methodology. Treat existing definitions as immutable when importing data;
+create a new series definition if its meaning changes. Runs carry the actual
+source URL/table, vintage, optional publication date, retrieval time, file
+identifier, SHA-256 checksum, method version, execution status, and notes.
+Repeated attempts may have different run IDs; they do not create duplicate facts.
+
+Observations preserve raw text plus `NUMERIC(24,8)` normalized values, status,
+quality notes, and separate observation date, reporting year, and delivery year.
+`W` (withheld) and missing values require null normalized values, never zero.
+An available value must have a nonnegative normalized value. Contract type and
+scenario are separate dimensions. Subdivided material/product categories should
+use distinct metric definitions when later table adapters require them.
+
+The unique fact key includes metric, artifact checksum, all period fields,
+contract type, and scenario. `NULLS NOT DISTINCT` prevents optional null fields
+from allowing duplicates (PostgreSQL 15+, matching our PostgreSQL 18 service).
+A changed artifact checksum permits another vintage of the fact; link it with
+`supersedes_observation_id` and retain the original. The database enforces a
+same-metric revision link; future importers must also verify matching periods
+and dimensions and avoid revision cycles. The schema does not itself implement
+provider parsing, automatic revision detection, or raw artifact storage.
+
+### Run migrations with Compose
+
+Start Docker Desktop and enable Ubuntu WSL integration first. From the project
+root, set the same password used when creating the existing database volume:
+
+```bash
+read -rsp 'Existing local database password: ' POSTGRES_PASSWORD
+export POSTGRES_PASSWORD
+printf '\n'
+docker compose up --build -d db api
+docker compose exec api uv run --locked --no-dev alembic upgrade head
+docker compose exec api uv run --locked --no-dev alembic current
+docker compose exec api uv run --locked --no-dev python -m app.db.demo
+```
+
+`upgrade head` applies pending migrations; running it again does nothing when
+already current. `current` should show `0001_provenance (head)`. The demo prints
+one mock price record and confirms that a repeat insert reused its observation.
+It rolls back all demo writes, including source, metric, run, and observation
+rows. No actual Cameco data is downloaded. Do not change the password to an
+existing volume: PostgreSQL initialization variables do not reset its password.
+
+On a clean database, the same upgrade creates all four tables plus Alembic's
+version table. Do not remove your existing volume to simulate a clean database;
+the integration suite uses a new isolated schema instead.
+
+### Worked observation trace
+
+The executable demo generates raw text `76.00` and its fixture checksum. The
+source identifies an explicitly synthetic publisher; the metric defines mock
+spot prices in USD/lb U3O8. The run ties that checksum to `workshop-mock-v1` and
+`demo-v1`. The observation stores June 30, 2025, raw `76.00`, exact decimal
+`76.00000000`, and `data_status='mock'`.
+
+Its join is conceptually:
+
+```sql
+SELECT s.name, m.series_id, m.unit, o.observation_date,
+       o.raw_value, o.normalized_value, r.source_vintage
+FROM market_observation AS o
+JOIN metric_definition AS m ON m.id = o.metric_id
+JOIN data_source AS s ON s.id = m.source_id
+JOIN ingestion_run AS r ON r.id = o.ingestion_run_id;
+```
+
+The future price response mapping is `observation_date` → `observation_month`
+(`2025-06`), `normalized_value` → `value`, metric unit/currency → series metadata,
+and joined source/run fields → provenance. The current API fixture still
+supplies that response independently; the demo is not a database-backed API.
+
+### Verify
+
+Run the non-database suite locally:
+
+```bash
+uv sync --directory backend --locked
+uv run --directory backend pytest
+```
+
+Run real PostgreSQL checks through Compose, keeping the database port internal:
+
+```bash
+docker compose run --rm -e RUN_POSTGRES_TESTS=1 \
+  -v "$PWD/backend/tests:/app/tests:ro" \
+  api uv run --locked pytest tests
+```
+
+This one-off container installs the already locked test dependencies. The tests
+create a randomly named schema, apply the migration, compare it with the Python
+models, insert/query fixtures, reject duplicates and invalid foreign keys,
+check suppression, and preserve a revised value beside the original. Each
+schema and its data are rolled back. The database user needs permission to
+create schemas. Expected with PostgreSQL available: **30 passed**.
+
+Alternatively, for an existing locally reachable PostgreSQL test database, set
+`TEST_DATABASE_URL` to a `postgresql+psycopg://...` URL and run the local pytest
+command. Tests use isolated schemas, not existing application tables. Local
+migration/demo commands accept `DATABASE_URL`; Compose supplies `DB_HOST=db`
+and `POSTGRES_PASSWORD` instead. Connection URLs containing special characters
+must be URL-encoded; the password-based configuration handles escaping itself.
+
+Implementation verification: **17 passed, 13 PostgreSQL tests skipped** because
+Docker/WSL integration was unavailable. The offline migration compiles to
+PostgreSQL SQL; actual clean-database application and constraints remain pending
+until the integration command above runs. The known HTTPX warning remains.
+Review these results before proceeding to source ingestion in Milestone 5.

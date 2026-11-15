@@ -14,6 +14,9 @@ services:
       retries: 10
   api:
     build: ./backend
+    environment:
+      DB_HOST: db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your shell}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
