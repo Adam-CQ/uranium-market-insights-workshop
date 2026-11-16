@@ -104,7 +104,7 @@ function ContractView({ response, table }: { response: ContractResponse; table: 
     {!selected.length ? <p>No observations match these controls.</p> : <>
       <SourceDates points={selected} />
       <MarketChart option={option} label={`${TABLE_TITLES[table]} in ${unit}; exact values and status in the following table`} />
-      {plotted.length > 0 && plotted.every(point => point.value === null) && <p role="status">All selected values are withheld or missing. No numeric bars are drawn.</p>}
+      {plotted.length > 0 && plotted.every(point => point.value === null) && <p role="status">All plotted component values are withheld or missing. No numeric bars are drawn; published totals may still be available.</p>}
       <p>Withheld/missing values have no bar and are not zero. The zero-based scale and single unit apply to this view only.</p>
       {totals.length > 0 && <p className="published-total">Published totals (not plotted with components): {totals.map(point => `${point.quantity_bound ?? "All contracts"}: ${pointValue(point)} ${point.unit}`).join("; ")}.</p>}
       <p className="muted">On narrow screens, scroll the data table horizontally to read every column and open source details.</p>

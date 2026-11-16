@@ -48,9 +48,13 @@ describe("dashboard API integration", () => {
     expect(table.textContent).toContain("Withheld (W)");
     expect(table.textContent).toContain(QUANTITY_UNIT);
     expect((screen.getByRole("combobox", { name: "Reporting year" }) as HTMLSelectElement).value).toBe("2025");
+    fireEvent.change(screen.getByRole("combobox", { name: "Contracting view" }), { target: { value: "10" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Supplier scope" }), { target: { value: "us" } });
+    expect(screen.getByText(/All plotted component values are withheld/)).toBeTruthy();
+    expect(screen.getByText(/Published totals \(not plotted with components\)/).textContent).toContain("1,317");
     fireEvent.change(screen.getByRole("combobox", { name: "Contracting view" }), { target: { value: "7" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Material" }), { target: { value: "natural_uf6" } });
-    expect(screen.getByText(/All selected values are withheld/)).toBeTruthy();
+    expect(screen.getByText(/All plotted component values are withheld/)).toBeTruthy();
   });
   it("shows explicit failure and retries without replacing missing EIA data with a mock count", async () => {
     fetchMock.mockImplementation(async (url: string) => url.includes("/signings") ? ({ ok: false, status: 503 }) : ({ ok: true, json: async () => fixtureForUrl(url) }));

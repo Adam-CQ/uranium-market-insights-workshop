@@ -3,6 +3,9 @@
 Educational market information, not investment advice. This workshop follows
 [_docs/uranium_market_dashboard_spec.md](_docs/uranium_market_dashboard_spec.md).
 
+The [Milestone 10 handoff](_docs/milestone_10_handoff.md) records the final clean-start
+verification, source-to-chart traces, troubleshooting steps, and remaining scope.
+
 ## Current data status
 
 The dashboard combines **invented price fixtures served by our API** with
@@ -58,6 +61,10 @@ Open http://localhost:5173 and click **Check API connection**. Expected:
 “API is healthy”. API documentation is at http://localhost:8000/docs.
 `--reload` restarts the API after edits; `--strictPort` fails rather than
 silently choosing another frontend port.
+This starts the mock-price preview. EIA views require a configured PostgreSQL
+database, migrations, and imports; follow [the EIA guide](data/eia.md) or use the
+Compose setup below. The API root at port 8000 has no `/` route; use `/docs` or
+`/health`. The dashboard is on port 5173.
 
 ## Run with Docker Compose
 
@@ -65,21 +72,27 @@ In WSL2, start Docker Desktop and enable integration for this Ubuntu distro
 under Settings → Resources → WSL Integration. Confirm `docker compose version`
 and `docker info` work before continuing.
 
-From the repository root, set a local database password without editing `.env`:
+From the repository root, set a local database password without editing `.env`.
+For an existing volume, use its original password; setting the variable does
+not reset an existing PostgreSQL password:
 
 ```bash
 read -rsp 'Local database password: ' POSTGRES_PASSWORD
 export POSTGRES_PASSWORD
 printf '\n'
 docker compose up --build -d
-curl --fail http://localhost:8000/health
+docker compose exec api uv run --locked --no-dev alembic upgrade head
+curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://localhost:8000/health
 docker compose logs --tail=50 api frontend db
 ```
 
 `--build` builds the application images; `-d` runs services in the background.
 Expected health response: `{"status":"ok"}`. Open http://localhost:5173 and
 check the connection. Stop the stack with `docker compose down`; the database
-volume remains available for the next startup.
+volume remains available for the next startup. A clean database has no EIA
+observations until you run [the EIA download/import workflow](data/eia.md).
+Before import, the dashboard correctly shows EIA unavailable and mock prices;
+`/health` only reports API liveness.
 
 The database port is internal. The API and frontend publish ports only on
 localhost. Compose requires the password variable even for configuration
@@ -822,3 +835,12 @@ Verification for these examples:
   receipt, manual disconnect, server-stop retry, and reconnect after restart with
   a fresh connection ID and sequence 1. Browser visual review remains the manual
   exercise in the WebSocket walkthrough; no browser-system packages were added.
+
+
+## Milestone 10: final review and handoff
+
+See [_docs/milestone_10_handoff.md](_docs/milestone_10_handoff.md) for the final
+verification results, exact commands, worked source-to-chart traces, debugging
+map, and definition-of-done review. The educational local app uses permitted
+EIA data and explicitly synthetic prices. Real Cameco price ingestion/display
+remains pending permission and is not represented as completed Phase 1 scope.

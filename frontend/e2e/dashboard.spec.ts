@@ -42,10 +42,11 @@ test("future totals and withheld rows are distinct; supplier and material views 
   await expect(eia.getByText(/Published totals \(not plotted with components\)/)).toBeVisible();
   await eia.getByLabel("Contracting view").selectOption("10");
   await eia.getByLabel("Supplier scope").selectOption("us");
-  await expect(eia.getByText(/All selected values are withheld/)).toBeVisible();
+  await expect(eia.getByText(/All plotted component values are withheld/)).toBeVisible();
+  await expect(eia.getByText(/Published totals \(not plotted with components\)/)).toContainText("1,317");
   await eia.getByLabel("Contracting view").selectOption("7");
   await eia.getByLabel("Material", { exact: true }).selectOption("natural_uf6");
-  await expect(eia.getByText(/All selected values are withheld/)).toBeVisible();
+  await expect(eia.getByText(/All plotted component values are withheld/)).toBeVisible();
   await expect(eia.getByRole("heading", { name: /Actual deliveries with reported price/ })).toBeVisible();
 });
 

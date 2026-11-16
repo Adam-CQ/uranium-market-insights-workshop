@@ -48,7 +48,11 @@ export function contracts(table: TableNumber): ContractResponse {
         const withheldSupplier = supplier === "us_" || supplier === "foreign_";
         points.push(point(table, supplier + bound, withheldSupplier ? null : table === 9 ? "1511" : bound === "minimum" ? "36650" : "42016"));
         points.push(point(table, supplier + bound, null, { delivery_year: 2033, period_label: "2033" }));
-        points.push(point(table, supplier + bound, withheldSupplier ? null : table === 9 ? (bound === "minimum" ? "8865" : "12938") : (bound === "minimum" ? "132508" : "174095"), { delivery_year: null, period_label: "2026–2035 total" }));
+        const horizon = table === 9 ? (bound === "minimum" ? "8865" : "12938")
+          : supplier === "us_" ? (bound === "minimum" ? "1317" : "1548")
+          : supplier === "foreign_" ? (bound === "minimum" ? "131191" : "172548")
+          : (bound === "minimum" ? "132508" : "174095");
+        points.push(point(table, supplier + bound, horizon, { delivery_year: null, period_label: "2026–2035 total" }));
       }
     }
   }
