@@ -753,3 +753,72 @@ Verification on November 16, 2026:
 The updated frontend is running at http://localhost:5173 for this review. For a
 clean checkout, follow the Compose and EIA import instructions above; empty
 imports or unavailable API/database services produce explicit messages.
+
+## Milestones 8 and 9: isolated educational examples
+
+Both examples use optional dependencies installed with uv; the dashboard API,
+frontend, PostgreSQL schema, ingestion pipeline, and Compose services are unchanged.
+DuckDB and websockets are pinned under the `examples` extra in
+`backend/pyproject.toml`. Core API containers do not install this extra.
+
+- [Milestone 8 — DuckDB + Parquet](examples/duckdb_parquet_demo/README.md): write
+  and query six permitted synthetic observations, preserve decimal/date types,
+  filter by period, and compare every row with the existing mock-price API.
+  PostgreSQL remains the operational store.
+- [Milestone 9 — mock WebSockets](examples/websocket_demo/README.md): a separate
+  FastAPI server and browser client demonstrate push, manual disconnect, retry
+  backoff, and a new stream after reconnect/server restart. It uses invented
+  unitless values and has no Cameco/EIA connection.
+
+### Commands from the repository root
+
+```bash
+uv sync --directory backend --extra examples
+uv run --project backend --extra examples python -m examples.duckdb_parquet_demo.demo
+uv run --directory backend --extra examples pytest tests/test_examples.py
+```
+
+Verification has already created the ignored Parquet snapshot in this workspace.
+The writer refuses overwrites. Use `--read-only` to query it again, or pass a new
+`--output` path. A clean checkout can run the write command directly.
+
+Start the standalone WebSocket app in another terminal:
+
+```bash
+uv run --project backend --extra examples uvicorn examples.websocket_demo.server:app --host 127.0.0.1 --port 8010
+```
+
+Open http://127.0.0.1:8010 and click Connect. Stop/restart this server while
+leaving the page open to observe reconnect; the sequence resets under a new
+connection ID. The walkthrough explains why this is not durable replay and why
+our monthly/annual dashboard does not use WebSockets.
+
+For the actual client JS/network check (after `npm --prefix frontend ci`):
+
+```bash
+uv run --project backend --extra examples node examples/websocket_demo/check_client.mjs
+```
+
+`--project backend` selects the Python environment while retaining the root as
+the working directory for `examples` module lookup. `--directory backend` is
+used for pytest so its backend configuration is loaded. The test Python path
+includes the repository root to import the isolated examples. Without the extra,
+workshop tests skip explicitly; include `--extra examples` to run them.
+
+Review both walkthroughs before Milestone 10's end-to-end handoff. No deployment
+or additional ingestion work is started by these examples.
+
+Verification for these examples:
+
+- All **10 new example tests passed**, including Parquet/API parity, filters,
+  no-overwrite behavior, message validation, disconnect/reconnect, and isolation
+  from the dashboard routes.
+- The full backend run with the optional extra reported **72 passed, 22 skipped**.
+  PostgreSQL tests skipped because Docker/WSL integration was unavailable in this
+  session. The previously known Starlette/HTTPX warning remains.
+- The documented Parquet write/read commands ran; filtering from April returned
+  exactly three rows with spot values 74.00, 71.00, and 76.00.
+- The actual HTML/JS client passed four checks over real local WebSocket frames:
+  receipt, manual disconnect, server-stop retry, and reconnect after restart with
+  a fresh connection ID and sequence 1. Browser visual review remains the manual
+  exercise in the WebSocket walkthrough; no browser-system packages were added.

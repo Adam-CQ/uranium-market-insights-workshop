@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock WebSocket learning example</title>
+  <style>
+    body { font: 1rem/1.6 system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; color: #182c38; }
+    .notice { background: #fff3d2; border-left: 4px solid #926309; padding: 1rem; }
+    button { font: inherit; margin: .5rem .5rem .5rem 0; padding: .5rem 1rem; }
+    pre { background: #f3f6f8; padding: 1rem; overflow: auto; max-height: 24rem; }
+    label { display: block; } dt { font-weight: 700; } dd { margin-left: 0; overflow-wrap: anywhere; }
+  </style>
+  <script src="/client.js" defer></script>
+</head>
+<body>
+  <h1>Mock WebSocket learning example</h1>
+  <p class="notice"><strong>Invented, unitless price-like messages only.</strong> This is not a real-time uranium feed and does not connect to Cameco, EIA, or the dashboard database.</p>
+  <p>HTTP loads this page once. A persistent WebSocket then receives server-pushed JSON about once per second.</p>
+  <button id="connect">Connect</button><button id="disconnect" disabled>Disconnect</button>
+  <label><input id="reconnect" type="checkbox" checked> Automatically reconnect after an unexpected disconnect</label>
+  <p id="status" role="status" aria-live="polite">Disconnected</p>
+  <dl><dt>Connection ID</dt><dd id="connection-id">None</dd><dt>Latest sequence</dt><dd id="sequence">None</dd></dl>
+  <h2>Received mock messages (latest 50)</h2>
+  <pre id="messages" aria-label="Received mock messages">No messages yet.</pre>
+  <h2>Try disconnect and restart</h2>
+  <ol>
+    <li>Click Connect. Observe the sequence and synthetic values received without a new HTTP request per message.</li>
+    <li>Click Disconnect. Automatic retry stops until you click Connect again.</li>
+    <li>Connect again, then stop the example server with Ctrl+C. Keep this page open; its status shows disconnect/retry.</li>
+    <li>Restart the same server command. With automatic reconnect enabled, this page reconnects with a new connection ID and sequence 1.</li>
+  </ol>
+  <p>Retries wait 1, 2, 4, then at most 8 seconds between attempts. Reconnecting starts a new mock stream; missed messages are not replayed. Published monthly/annual uranium data uses ordinary HTTP in our dashboard.</p>
+</body>
+</html>

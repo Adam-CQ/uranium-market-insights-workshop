@@ -1,0 +1,7 @@
+observation_date,spot_price,long_term_price,unit,currency,source_name,data_status
+2025-01-01,70.00,80.00,USD/lb U3O8,USD,Synthetic teaching fixture,mock
+2025-02-01,68.00,80.00,USD/lb U3O8,USD,Synthetic teaching fixture,mock
+2025-03-01,72.00,81.00,USD/lb U3O8,USD,Synthetic teaching fixture,mock
+2025-04-01,74.00,81.00,USD/lb U3O8,USD,Synthetic teaching fixture,mock
+2025-05-01,71.00,82.00,USD/lb U3O8,USD,Synthetic teaching fixture,mock
+2025-06-01,76.00,83.00,USD/lb U3O8,USD,Synthetic teaching fixture,mock
