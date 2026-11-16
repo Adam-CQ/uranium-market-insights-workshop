@@ -30,3 +30,25 @@ dd { margin-left: 0; }
 footer { margin: 2rem 0; font-size: .9rem; }
 @media (max-width: 1000px) { .snapshots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { main { padding: 0 1rem; } .snapshots { grid-template-columns: 1fr; } .panel { padding: 1rem; } }
+.observed { background: #e0f1ed; color: #175846; }
+.scope-chip { display: inline-block; border: 1px solid #67818d; border-radius: .3rem; padding: .1rem .4rem; font-size: .85rem; }
+.market-chart { width: 100%; height: 360px; min-width: 0; margin: 1rem 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+.controls label { display: grid; gap: .3rem; }
+select { max-width: 100%; }
+.panel, .source-dates, .provenance dd { overflow-wrap: anywhere; min-width: 0; }
+.provenance { max-width: 24rem; min-width: 8rem; }
+.provenance dd { white-space: normal; }
+details { margin: 1rem 0; }
+summary { cursor: pointer; font-weight: 650; padding: .35rem 0; }
+summary:focus-visible, a:focus-visible { outline: 3px solid #087e83; outline-offset: 3px; }
+a { color: #075b80; text-underline-offset: .15em; }
+li { margin-bottom: .6rem; }
+.guide { border-top: 1px solid #d9e2e8; padding-top: .5rem; }
+.published-total { border-left: 3px solid #67818d; padding-left: .8rem; }
+@media (max-width: 560px) { .market-chart { height: 320px; } .controls label { width: 100%; } th, td { padding: .5rem; } }
+
+.contract-table { min-width: 48rem; }
+.contract-table th, .contract-table td { overflow-wrap: normal; white-space: nowrap; vertical-align: top; }
+.contract-table .provenance dd { white-space: normal; overflow-wrap: anywhere; }
+.table-scroll:focus-visible { outline: 3px solid #087e83; outline-offset: 3px; }

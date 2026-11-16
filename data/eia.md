@@ -195,8 +195,9 @@ With no matching successful import, a configured database returns 200 with
 return 503. There is no silent mock fallback. Querying multiple reporting years
 returns explicitly labelled points; clients must preserve the vintage grouping.
 
-The existing `/market/summary`, price endpoints, and frontend remain synthetic.
-Milestone 7 will connect the EIA chart responses. Cameco import/display remains
+The existing `/market/summary` preview and price endpoints remain synthetic.
+The dashboard now reads the EIA chart responses through the dedicated contracts
+endpoints; see the Milestone 7 section of the root README for chart controls. Cameco import/display remains
 pending permission, with mock prices and manual-check guidance as specified.
 
 ## Tests and validation evidence

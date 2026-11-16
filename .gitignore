@@ -9,3 +9,7 @@ dist/
 # Local source artifacts and normalized extracts are never committed.
 data/raw/
 data/processed/
+
+# Browser test outputs
+frontend/test-results/
+frontend/playwright-report/

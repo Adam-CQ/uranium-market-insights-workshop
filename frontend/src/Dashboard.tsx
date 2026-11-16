@@ -1,102 +1,62 @@
 import { useState } from "react";
-import { mockContracting, mockPrices, selectPrices } from "./mockMarket";
-import type { PriceRange, UraniumPricePoint } from "./mockMarket";
+import { displayValue, getContracts, getPrices, PRICE_UNIT } from "./api/market";
+import type { ContractPoint, ContractResponse, TableNumber } from "./api/market";
+import type { PriceRange } from "./mockMarket";
+import { ContractsPanel, pointValue } from "./components/ContractsPanel";
+import { PricePanel, selectedPrices } from "./components/PricePanel";
+import { useResource } from "./components/useResource";
 
-function SnapshotCard({ title, value, detail }: { title: string; value: string; detail: string }) {
-  return (
-    <article className="card">
-      <span className="badge">Mock data</span>
-      <h3>{title}</h3>
-      <p className="metric">{value}</p>
-      <p>{detail}</p>
-      <small>Source: synthetic teaching fixture</small>
-    </article>
-  );
+const loaders = {
+  7: (signal: AbortSignal) => getContracts(7, signal), 8: (signal: AbortSignal) => getContracts(8, signal),
+  9: (signal: AbortSignal) => getContracts(9, signal), 10: (signal: AbortSignal) => getContracts(10, signal),
+};
+function SnapshotCard({ title, value, detail, mock = false }: { title: string; value: string; detail: string; mock?: boolean }) {
+  return <article className="card"><span className={`badge ${mock ? "" : "observed"}`}>{mock ? "Mock data" : "EIA · U.S."}</span>
+    <h3>{title}</h3><p className="metric">{value}</p><p>{detail}</p>
+    <small>{mock ? "Source: synthetic teaching fixture" : "Source: U.S. Energy Information Administration"}</small>
+  </article>;
 }
-
-function PriceChart({ points }: { points: UraniumPricePoint[] }) {
-  // A fixed zero-based scale makes range comparisons honest in this placeholder.
-  const x = (index: number) => 60 + index * (600 / Math.max(points.length - 1, 1));
-  const y = (value: number) => 230 - value * 2;
-  const line = (key: "spot" | "longTerm") => points.map((point, index) => `${x(index)},${y(point[key])}`).join(" ");
-
-  return (
-    <>
-      <div className="legend"><span>Solid teal: spot indicator</span><span>Dashed purple: long-term indicator</span></div>
-      <svg className="price-chart" viewBox="0 0 720 280" role="img" aria-labelledby="chart-title" aria-describedby="chart-description">
-        <title id="chart-title">Mock uranium price history</title>
-        <desc id="chart-description">Synthetic spot and long-term indicators in USD per pound U3O8. Exact values appear in the following table.</desc>
-        {[0, 25, 50, 75, 100].map((value) => (
-          <g key={value}>
-            <line x1="60" x2="660" y1={y(value)} y2={y(value)} stroke="#d9e2e8" />
-            <text x="48" y={y(value) + 4} textAnchor="end">{value}</text>
-          </g>
-        ))}
-        <polyline points={line("spot")} fill="none" stroke="#087e83" strokeWidth="3" />
-        <polyline points={line("longTerm")} fill="none" stroke="#7746a4" strokeWidth="3" strokeDasharray="8 5" />
-        {points.map((point, index) => <text key={point.month} x={x(index)} y="257" textAnchor="middle">{point.month}</text>)}
-      </svg>
-      <div className="table-scroll">
-        <table>
-          <caption>Mock price values — USD per pound U3O8</caption>
-          <thead><tr><th scope="col">Observation month</th><th scope="col">Spot indicator</th><th scope="col">Long-term indicator</th></tr></thead>
-          <tbody>{points.map((point) => <tr key={point.month}><th scope="row">{point.month}</th><td>{point.spot.toFixed(2)}</td><td>{point.longTerm.toFixed(2)}</td></tr>)}</tbody>
-        </table>
-      </div>
-    </>
-  );
+function latestCount(data: ContractResponse | null): ContractPoint | undefined {
+  return data?.points.filter(point => point.series_id === "eia_t8_contract_count" && point.contract_type === "total").sort((a, b) => b.report_year - a.report_year)[0];
 }
-
 export function Dashboard() {
+  const prices = useResource(getPrices);
+  const resources = { 7: useResource(loaders[7]), 8: useResource(loaders[8]), 9: useResource(loaders[9]), 10: useResource(loaders[10]) };
   const [range, setRange] = useState<PriceRange>("all");
-  const points = selectPrices(mockPrices, range);
-  const latest = mockPrices[mockPrices.length - 1];
-  const first = points[0];
-  const change = (key: "spot" | "longTerm") => {
-    const difference = latest[key] - first[key];
-    return `${difference >= 0 ? "+" : ""}${difference.toFixed(2)} USD/lb U3O8 since ${first.month}`;
-  };
-
-  return (
-    <>
-      <header>
-        <p className="eyebrow">Market context · workshop preview</p>
-        <h1>Uranium Market Dashboard</h1>
-        <p>Explore price indicators and U.S. utility contracting with clear definitions and dates.</p>
-      </header>
-      <aside className="notice" aria-label="Mock data notice">
-        <strong>Mock data — all market values are invented.</strong> This preview contains no Cameco or EIA observations. Dates and units demonstrate the future interface.
-        <p>Cameco price import and display are pending reuse permission. We will continue showing synthetic prices; these values are not expected to match Cameco’s published prices.</p>
-      </aside>
-      <section aria-labelledby="snapshot-title">
-        <h2 id="snapshot-title">Market snapshot</h2>
-        <div className="snapshots">
-          <SnapshotCard title="Spot price indicator" value={`${latest.spot.toFixed(2)} USD/lb U3O8`} detail={`Mock observation: ${latest.month}. ${change("spot")}.`} />
-          <SnapshotCard title="Long-term price indicator" value={`${latest.longTerm.toFixed(2)} USD/lb U3O8`} detail={`Mock observation: ${latest.month}. ${change("longTerm")}.`} />
-          <SnapshotCard title="Newly signed contracts — U.S." value={`${mockContracting.contractCount} contracts`} detail={`Mock reporting year: ${mockContracting.reportingYear}. ${mockContracting.scope}. Annual signings, not deliveries.`} />
-          <SnapshotCard title="Data freshness" value="No source retrieved" detail="Local mock fixture only. Publication and retrieval dates are unavailable. Price and contracting sources will update on different schedules." />
-        </div>
-      </section>
-      <section className="panel" aria-labelledby="prices-title">
-        <h2 id="prices-title">Uranium price history — mock data</h2>
-        <p>USD per pound U3O8 · last mock observation: {latest.month} · monthly sample</p>
-        <label htmlFor="price-range">Time range </label>
-        <select id="price-range" value={range} onChange={(event) => setRange(event.target.value as PriceRange)}>
-          <option value="all">All 6 mock months</option>
-          <option value="3m">Last 3 mock months</option>
-        </select>
-        <p className="range-description" aria-live="polite">Showing {points[0].month} through {latest.month}. Snapshot changes use this range.</p>
-        <PriceChart points={points} />
-        <p className="muted">Source: synthetic teaching fixture. The placeholder connects monthly sample values with straight lines; it does not implement provider methodology.</p>
-      </section>
-      <section className="panel" aria-labelledby="reading-title">
-        <h2 id="reading-title">How to read this dashboard</h2>
-        <dl>
-          <dt>Price indicators</dt><dd>Spot and long-term indicators describe different market conditions. Uranium contracts are privately negotiated; an indicator is not the price of every sale.</dd>
-          <dt>Signings and deliveries</dt><dd>A contract signing year records when an agreement was made. Delivery years record when uranium is due or was delivered. The mock signing count is not a delivery quantity.</dd>
-          <dt>Scope and freshness</dt><dd>The planned EIA view covers U.S. civilian reactor owners/operators, not the global market. Observation periods, source publication dates, and retrieval times will be shown separately when real data is connected.</dd>
-        </dl>
-      </section>
-    </>
-  );
+  const points = selectedPrices(prices.data, range);
+  const latest = points[points.length - 1];
+  const count = latestCount(resources[8].data);
+  function priceDetail(key: "spot" | "longTerm") {
+    if (!latest) return prices.loading ? "Loading mock prices from API." : "Mock prices unavailable; no local fallback.";
+    const difference = latest[key] - points[0][key];
+    return `Mock observation: ${latest.month}. ${difference >= 0 ? "+" : ""}${difference.toFixed(2)} ${PRICE_UNIT} since ${points[0].month}.`;
+  }
+  return <>
+    <header><p className="eyebrow">Uranium market context</p><h1>Uranium Market Dashboard</h1><p>Price indicators, U.S. utility contracting, and the source context behind each view.</p></header>
+    <aside className="notice" aria-label="Mock data notice"><strong>Prices are mock; contracting views use imported EIA data when available.</strong>
+      <p>Cameco price import and display are pending reuse permission. All displayed price values are invented and are not expected to match Cameco’s published prices. EIA views identify their U.S.-only scope and report vintage.</p>
+    </aside>
+    <section aria-labelledby="snapshot-title"><h2 id="snapshot-title">Market snapshot</h2><div className="snapshots">
+      <SnapshotCard mock title="Spot price indicator" value={latest ? `${latest.spot.toFixed(2)} ${PRICE_UNIT}` : "Unavailable"} detail={priceDetail("spot")} />
+      <SnapshotCard mock title="Long-term price indicator" value={latest ? `${latest.longTerm.toFixed(2)} ${PRICE_UNIT}` : "Unavailable"} detail={priceDetail("longTerm")} />
+      <SnapshotCard title="New contracts with same-year deliveries — U.S." value={count ? `${pointValue(count)}${count.value !== null ? " contracts" : ""}` : resources[8].loading ? "Loading…" : "Unavailable"} detail={count ? `Report year ${count.report_year}. Signed that year with deliveries received that year; not all new contracts. ${count.data_status}. Published/revised ${count.source_publication_date}.` : "EIA Table 8 data is unavailable. No mock count is substituted."} />
+      <SnapshotCard title="Source freshness" value={count ? `EIA report ${count.report_year}` : "EIA unavailable"} detail={count ? `Annual source. Value-source retrieval: ${new Date(count.retrieved_at).toISOString()}. Mock prices have no publication or external retrieval date.` : "Mock prices have no external retrieval date. Each EIA view shows its own source dates when available."} />
+    </div></section>
+    <PricePanel resource={prices} range={range} setRange={setRange} />
+    <ContractsPanel resources={resources as Record<TableNumber, typeof resources[7]>} />
+    <section className="panel" aria-labelledby="reading-title"><h2 id="reading-title">How to read this dashboard</h2><dl>
+      <dt>Signing year versus delivery year</dt><dd>Signing records when an agreement was made. Future delivery years describe what is contracted to arrive; actual deliveries describe material received. EIA’s minimum/maximum contract bounds are not probability scenarios.</dd>
+      <dt>Price indicators versus transactions</dt><dd>Uranium contracts are privately negotiated. Published spot/long-term indicators are not prices for every sale. Our price chart remains synthetic; EIA delivery prices are different measures.</dd>
+      <dt>Scope and aggregation</dt><dd>EIA covers U.S. civilian reactor owners/operators. No global Cameco/UxC contracting figures are merged here. Totals overlap their components. Different report vintages must stay separate.</dd>
+      <dt>Suppression, dates, and uncertainty</dt><dd>Withheld values (W) and missing values remain unavailable. Source publication dates, observation/reporting periods, and value-source retrieval times have distinct meanings. Rows marked revised retain their source trail.</dd>
+      <dt>Follow-on context</dt><dd>A scenario supply gap would not prove an observed shortage. Nuclear capacity is a demand driver, not a direct uranium-demand series. No unverified projection data is plotted.</dd>
+    </dl>
+    <details><summary>Worked example: trace a signing bar and compare an actual delivery</summary>
+      <p>The Table 8 bar uses the total contract count for the reporting year. Its value has a unit of contracts, not uranium volume; open that row’s Source details for the workbook, publication date, vintage, checksum, and run.</p>
+      <p>Switch to Table 7, All materials, Quantity to inspect actual deliveries with reported price. Its unit is thousand pounds U3O8 equivalent. It includes deliveries under existing contracts and cannot be interpreted as the Table 8 signing count.</p>
+      {count && <p>Current Table 8 example: {displayValue(count.value)} contracts for report year {count.report_year}; source <a href={count.source_url}>{count.source_table} workbook</a>.</p>}
+      <p>The table preserves API decimal values with display formatting; decimal strings become numbers only for chart coordinates. Source details retain the raw cell text.</p>
+    </details>
+    </section>
+  </>;
 }

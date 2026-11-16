@@ -1,0 +1,15 @@
+export function CamecoGuide() {
+  return <details className="guide">
+    <summary>Check Cameco prices manually</summary>
+    <p><strong>Our price chart uses invented API fixtures.</strong> Review the official source independently. Its values will differ from our mock prices; viewing it does not import, refresh, or validate our mock series, or grant reuse permission.</p>
+    <ol>
+      <li>Open <a href="https://www.cameco.com/invest/markets/uranium-price">Cameco — Uranium Price</a>. At the historical chart, use <strong>5y</strong> or <strong>All</strong> and the date-range controls to choose a period. Hover over the chart for a month’s spot and long-term values. If the chart does not load, the page’s Spot Price and Long-term Price tables provide recent years: choose the same month row and year column in each. For older history, use the chart’s All range and date controls.</li>
+      <li>Read the two indicators separately for the same observation month. Record that month and the date/time you viewed the page. Historical first-of-month and month-end labels identify monthly observations; they are not transaction dates. A source publication date is separate and may be unknown. Our API retrieval timestamp is also a different field.</li>
+      <li>Check currency and unit: US dollars per pound U3O8. The current table HTML does not label them explicitly; use the industry-price discussion and term-price table in the <a href="https://www.cameco.com/invest/financial-information/annual-reports">official annual reports</a> as supporting evidence. These are published indicators, not prices for every privately negotiated sale.</li>
+      <li>Read the methodology paragraph above the chart on the <a href="https://www.cameco.com/invest/markets/uranium-price">price page</a>: Cameco averages month-end UxC and TradeTech inputs, while long-term history before May 2004 uses TradeTech only. A blank historical value is missing, not zero. Identical duplicate months do not represent extra trades; conflicting duplicates need review. Do not interpolate gaps.</li>
+      <li>Use <a href="https://www.cameco.com/invest/markets">Cameco — Markets</a> for market context and read the <a href="https://www.cameco.com/terms-of-use">Terms of Use</a>. Permission for this project’s real-data import/display remains unresolved. Unaltered personal viewing/printing does not establish permission for our application’s reuse.</li>
+      <li><strong>Only after permitted real-data import is enabled:</strong> compare a recent month and the April/May 2004 methodology boundary against our accessible data table and API. Match series, month, unit, and source vintage. Record the source URL, month, both values, viewing time, dashboard vintage, and any mismatch for review. Do not silently overwrite history. This conditional verification has not been performed on our mock series.</li>
+    </ol>
+    <p className="muted">Source layout reviewed November 16, 2026. Controls may change; use the published tables or recheck the current page if the chart controls differ.</p>
+  </details>;
+}

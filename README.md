@@ -5,21 +5,24 @@ Educational market information, not investment advice. This workshop follows
 
 ## Current data status
 
-The dashboard, price endpoints, and market-summary preview currently display
-**invented mock data**. Dedicated EIA contracting endpoints now serve imported
-2025 U.S. observations; the dashboard will connect to them in Milestone 7. We will continue using synthetic prices while permission for
-Cameco import and display remains unresolved. Mock values are not expected to
-match Cameco's published prices and must not be used to check actual market levels.
+The dashboard combines **invented price fixtures served by our API** with
+**imported EIA U.S. contracting/delivery data**, currently reporting year 2025.
+The price panel and two price cards remain synthetic while Cameco permission is
+unresolved. Mock prices are not expected to match Cameco's published values.
+The dashboard now reads the dedicated EIA endpoints; the older market-summary
+preview endpoint still returns its explicitly mocked contract fixture and is
+not used by this dashboard. Milestone sections below describe their historical
+review checkpoints; this section describes the current application.
 
 Milestone 5's parser and database adapter are implemented and tested with synthetic
 fixtures; real-data import and source-value validation remain pending. See the
 [source review](data/README.md) and [Cameco terms](https://www.cameco.com/terms-of-use).
 
-Milestone 7 will add detailed manual-check instructions beside the price chart
+Milestone 7 adds detailed manual-check instructions beside the price chart
 and in this README, with links to [Cameco's uranium price page](https://www.cameco.com/invest/markets/uranium-price),
-its methodology, and reuse terms. The guide will explain how to inspect the
+its methodology, and reuse terms. The guide explains how to inspect the
 published series, observation month, units, missing values, and methodology
-changes. It will distinguish reviewing the source from validating our mock
+changes. It distinguishes reviewing the source from validating our mock
 prices; comparing imported values is conditional on permitted real-data use.
 
 ## Milestone 1: local scaffold
@@ -559,3 +562,194 @@ The dashboard and existing price/market-summary endpoints remain mocked, as
 agreed. Cameco permission is still unresolved; EIA's public reuse policy permits
 these survey-data imports with attribution. Stop at this review checkpoint
 before chart integration and manual source-check guidance in Milestone 7.
+
+
+## Milestone 7: API charts, provenance, and education
+
+The dashboard fetches validated price/EIA responses through Vite's `/api` proxy.
+Price observations are still **mock**; no Cameco data is ingested or displayed.
+EIA signings, future contracted purchases, and actual deliveries have separate
+views, explicitly labelled as U.S. reactor-owner/operator data. They are not
+merged with global Cameco/UxC estimates. Only 2025 EIA data is currently imported;
+a single annual bar does not represent a full historical series.
+
+### Code map and practical lesson
+
+- `frontend/src/api/market.ts`: TypeScript contracts plus runtime checks for
+  scope, periods, units, dimensions, value status, duplicate facts, and source
+  links. JSON from HTTP is `unknown` until checked; TypeScript types alone do
+  not validate external responses.
+- `frontend/src/components/useResource.tsx`: loading/error/retry and cancellation.
+  Failed/empty imports are shown explicitly; no mock EIA fallback is used.
+- `frontend/src/charts/MarketChart.tsx`: React/ECharts lifecycle, SVG rendering,
+  resize handling, and disposal when options/components change. Only line/bar
+  charts and required ECharts components are imported.
+- `frontend/src/components/PricePanel.tsx`: mock API prices, range controls,
+  source status, chart, accessible table, and manual source-check guide.
+- `frontend/src/components/ContractsPanel.tsx`: view/measure/vintage/material/
+  supplier controls, single-unit charts, withheld/missing states, per-row
+  provenance, and the annual freshness reminder.
+- `frontend/src/components/CamecoGuide.tsx`: the six manual-review steps below.
+- `frontend/src/Dashboard.tsx`: mixed-source snapshot cards, source separation,
+  educational definitions, and the Table 8 versus Table 7 worked example.
+- `frontend/src/Dashboard.test.tsx`, `frontend/e2e/dashboard.spec.ts`: deterministic
+  DOM/data-boundary and actual Chromium desktop/mobile checks respectively.
+
+For example, selecting a report vintage filters facts *before* charting:
+
+```ts
+if (point.report_year !== Number(selection.year)) return false;
+```
+
+Table 9's delivery year 2026 still belongs to report year 2025. The chart groups
+minimum/maximum bounds for that one vintage. The accessible table retains both
+years, exact decimal values, and source metadata. Horizon totals are listed
+separately and not plotted beside their component years.
+
+A Table 8 signing-count bar follows this path: EIA workbook → normalized
+observation/run → `/api/v1/contracts/signings` → validated client record →
+selected metric/contract type → annual bar. Open the table row's **Source details**
+to inspect workbook URL, publication/revision date, vintage, artifact checksum,
+run ID, raw value, and quality/revision notes. The qualifier is **contracts signed
+in the reporting year with deliveries received that year**, not all new signings.
+
+Switch to **Actual deliveries with reported price — EIA Table 7**, choose
+**All materials** and **Quantity**, and compare the meaning: those values are
+thousand pounds U3O8 equivalent actually delivered under contracts, not a count
+of agreements. Select a material to inspect its separate quantities. Prices
+are weighted-average delivery prices in a different unit and have their own
+measure selection. Neither measure is the synthetic Cameco-style price series.
+
+Line charts connect monthly mock price samples; annual/category bars display
+contract measures. Zero-based scales avoid exaggerating small differences.
+Contractual minimum/maximum bounds are not probabilistic forecasts. Withheld
+`W` and missing cells have null chart coordinates, no numeric bar, and readable
+status in the table; they are never turned into zero or reconstructed from
+other totals. Tables remain the accessible alternative to pointer-based charts.
+At narrow widths, EIA tables scroll horizontally and can receive keyboard focus.
+
+Each EIA view displays report publication/revision and value-source retrieval
+times separately. Raw-source retrieval is not the time a browser loaded the
+page, nor necessarily the latest import check. Older annual publications show
+a review reminder after 400 days; this is an explicit UI heuristic, not proof
+that EIA released new data. Refreshing/retrying the page requests stored API
+records; it does not download a new publisher vintage. Real source updates use
+[the EIA ingestion workflow](data/eia.md).
+
+### Check Cameco prices manually
+
+This guide is also beside the price chart, expandable via **Check Cameco prices
+manually**. Our price chart uses invented API fixtures. Review the official
+source independently: its values will differ from our mock prices. Viewing the
+source does not import, refresh, or validate our mock series, or grant reuse
+permission.
+
+1. Open [Cameco — Uranium Price](https://www.cameco.com/invest/markets/uranium-price).
+   At the historical chart, use **5y** or **All** and the **From/To** date fields
+   to choose a period. Hover for a month's spot and long-term values. If the
+   chart does not load, its **Spot Price** and **Long-term Price** tables provide
+   recent years: choose the same month row and year column in each. For older
+   history, use the chart's All range and date controls. The live controls were
+   checked in Chromium on November 16, 2026; recheck the layout if it changes.
+2. Read the two indicators separately for the same observation month. Record
+   that month and the date/time you viewed the page. Historical first-of-month
+   and month-end labels identify monthly observations, not transaction dates.
+   A source publication date may be unknown. Our API retrieval time is another
+   field and does not mean the source was published then.
+3. Check currency and unit: **US dollars per pound U3O8**. The current table HTML
+   does not label them explicitly; use the industry-price discussion and
+   term-price table in the [official annual reports](https://www.cameco.com/invest/financial-information/annual-reports)
+   as supporting evidence. These are indicators, not prices for every private
+   sale. Do not substitute EIA's delivered-price or U3O8-equivalent definitions.
+4. Read the methodology paragraph above the chart on the
+   [price page](https://www.cameco.com/invest/markets/uranium-price): Cameco averages
+   month-end UxC and TradeTech inputs, while long-term history before May 2004
+   uses TradeTech only. Blank historical values are missing, not zero. Identical
+   duplicate months are not extra trades; conflicting duplicates require review.
+   Do not interpolate gaps.
+5. Use [Cameco — Markets](https://www.cameco.com/invest/markets) for context and
+   read the [Terms of Use](https://www.cameco.com/terms-of-use). Permission for this
+   project's real-data import/display remains unresolved. The stated unaltered
+   personal viewing/printing licence does not establish application reuse rights.
+6. **Only after permitted real-data import is enabled:** compare a recent month
+   and the April/May 2004 methodology boundary against our accessible data table
+   and API. Match series, month, unit, and source vintage. Record source URL,
+   month, both values, viewing time, dashboard vintage, and any mismatch for
+   review. Do not silently overwrite history. This conditional verification has
+   not been performed on our mock series.
+
+### Run, test, and review
+
+From the repository root (ECharts and Playwright are pinned in the npm lockfile):
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend test
+npm --prefix frontend run build
+npm --prefix frontend run dev -- --port 5173 --strictPort
+```
+
+Run the API separately with the existing PostgreSQL configuration, or use
+Compose with your existing `POSTGRES_PASSWORD` exported:
+
+```bash
+docker compose up --build -d
+```
+
+Open http://localhost:5173. Vite forwards `/api` and `/health` to localhost:8000
+in the local two-terminal setup, or to service `api:8000` inside Compose. The
+API can serve mock prices without a database, but the EIA views require a
+configured/migrated database and successful imports. See [EIA setup](data/eia.md).
+
+Browser tests start their own Vite server on port 4173 and intercept API requests
+with compact offline test doubles, so they need neither PostgreSQL nor external
+source access. They exercise actual ECharts SVG, tooltips, selectors, source
+links, failure/retry, and 375px/1280px layouts. Screenshots/traces live under
+ignored `frontend/test-results/`.
+
+```bash
+npm --prefix frontend exec -- playwright install chromium
+npm --prefix frontend run test:e2e
+```
+
+The current WSL environment lacks Chromium system libraries, so browser checks
+can run in the official matching Playwright image, which includes them:
+
+```bash
+docker run --rm --init --ipc=host --user "$(id -u):$(id -g)" \
+  -v "$PWD/frontend:/work" -w /work \
+  mcr.microsoft.com/playwright:v1.65.1-noble npm run test:e2e
+```
+
+`--ipc=host` supplies sufficient shared memory for Chromium; `--init` manages
+container child processes. `--user "$(id -u):$(id -g)"` runs as your WSL user so
+Vite caches and browser outputs remain writable by local npm commands. The image version matches the pinned Playwright
+package. Run `npm ci` first so the mounted frontend has its test dependencies.
+Container execution is the verified option here; installing host browser system
+packages is not required for this workflow.
+
+Review checkpoint: select all four EIA views, change quantity/price and material/
+supplier controls, inspect a withheld row and its source details, compare Table
+8 and Table 7, expand the Cameco guide, and check the mobile table scroll. Confirm
+mock-price notices persist and no global contracting figures are overlaid.
+Milestone 8 (DuckDB/Parquet) starts only after this review.
+
+
+Verification on November 16, 2026:
+
+- **10 frontend component/data-contract tests passed**.
+- **8 Chromium tests passed** across desktop (1280px) and mobile (375px), including
+  rendered ECharts SVG/tooltips, selectors, source provenance, guide links,
+  withheld states, retries, and document overflow checks.
+- **TypeScript and the production build passed**. Vite reports a roughly 794 kB
+  JavaScript chunk (263 kB gzip), primarily React/ECharts; further bundle splitting
+  is deferred. ECharts imports already use its selective core interface.
+- A separate browser review used the live Compose frontend, Vite proxy, API,
+  and PostgreSQL at both widths. All four EIA views and the API connection check
+  worked without page errors; screenshots were inspected for readable layout.
+- The live Cameco page's 5y/All and From/To controls were checked, and the Markets,
+  annual-reports, and terms links returned HTTP 200. No Cameco data was imported.
+
+The updated frontend is running at http://localhost:5173 for this review. For a
+clean checkout, follow the Compose and EIA import instructions above; empty
+imports or unavailable API/database services produce explicit messages.

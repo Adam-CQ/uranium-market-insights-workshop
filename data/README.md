@@ -155,7 +155,7 @@ text and original date in notes. Formatting-only changes are retained in the new
 artifact/run but do not create a new value revision. Never rewrite historical
 rows to change units or silently delete missing months. A future database read
 adapter must resolve revision chains and freshness from ingestion runs; the
-current dashboard/API intentionally remain synthetic until integration.
+price dashboard/API remain synthetic pending Cameco permission; EIA views now use their separate imported data.
 
 ## Local files and repository hygiene
 
